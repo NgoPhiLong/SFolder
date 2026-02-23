@@ -1,20 +1,19 @@
 ﻿#region Namespaces
-using System.IO;
-using System.Windows;
-
-using Newtonsoft.Json;
-
-// Alias tránh trùng với WinForms
-using Win32SaveFileDialog = Microsoft.Win32.SaveFileDialog;
-
-using Path = System.IO.Path;
-using MessageBox = System.Windows.MessageBox;
-using System.Windows.Input;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using iText.Kernel.Pdf;
 using Microsoft.Win32;
+using Newtonsoft.Json;
+using System.ComponentModel;
+using System.IO;
+using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media.TextFormatting;
 using System.Xml;
+using MessageBox = System.Windows.MessageBox;
+using Path = System.IO.Path;
+// Alias tránh trùng với WinForms
+using Win32SaveFileDialog = Microsoft.Win32.SaveFileDialog;
 #endregion
 
 namespace NPL_Tools
@@ -124,6 +123,127 @@ namespace NPL_Tools
                 ExportToJson(annotations, dialog.FileName);
                 MessageBox.Show("Export thành công!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information);
             }
+        }
+
+        private void BtnSource_Click(object sender, EventArgs e)
+        {
+            using (FolderBrowserDialog fbd = new FolderBrowserDialog())
+            {
+                if (fbd.ShowDialog() == DialogResult.OK)
+                    txtSource.Text = fbd.SelectedPath;
+            }
+        }
+
+        private void BtnTarget_Click(object sender, EventArgs e)
+        {
+            using (FolderBrowserDialog fbd = new FolderBrowserDialog())
+            {
+                if (fbd.ShowDialog() == DialogResult.OK)
+                    txtTarget.Text = fbd.SelectedPath;
+            }
+        }
+
+        private void BtnExecute_Click(object sender, EventArgs e)
+        {
+            if (!Directory.Exists(txtSource.Text) || !Directory.Exists(txtTarget.Text))
+            {
+                MessageBox.Show("Invalid folder path.");
+                return;
+            }
+
+            var sourceFiles = Directory.GetFiles(txtSource.Text)
+                .Where(f =>
+                    (f.EndsWith(".dwg", StringComparison.OrdinalIgnoreCase) ||
+                     f.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)) &&
+                    HasRevision(Path.GetFileName(f)))
+                .ToArray();
+
+            var targetFiles = Directory.GetFiles(txtTarget.Text)
+                .Where(f =>
+                    f.EndsWith(".dwg", StringComparison.OrdinalIgnoreCase) ||
+                    f.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+            int updated = 0;
+            int skipped = 0;
+
+            foreach (var src in sourceFiles)
+            {
+                string fileName = Path.GetFileName(src);
+                string baseName = RemoveRevision(fileName);
+                string extension = Path.GetExtension(src);
+                int sourceRev = ExtractRevision(fileName);
+
+                var targetMatch = targetFiles
+                    .FirstOrDefault(f =>
+                        RemoveRevision(Path.GetFileName(f)) == baseName &&
+                        Path.GetExtension(f).Equals(extension, StringComparison.OrdinalIgnoreCase));
+
+                // Không tồn tại base trong Target → bỏ qua
+                if (targetMatch == null)
+                {
+                    skipped++;
+                    continue;
+                }
+
+                int targetRev = ExtractRevision(Path.GetFileName(targetMatch));
+
+                try
+                {
+                    if (sourceRev > targetRev)
+                    {
+                        // Source lớn hơn → thay thế Target
+                        File.Delete(targetMatch);
+
+                        string newPath = Path.Combine(txtTarget.Text, fileName);
+                        File.Move(src, newPath);
+
+                        updated++;
+                    }
+                    else
+                    {
+                        // Source nhỏ hơn hoặc bằng → giữ Target, xóa Source
+                        File.Delete(src);
+                        skipped++;
+                    }
+                }
+                catch
+                {
+                    skipped++;
+                }
+
+            }
+
+            MessageBox.Show(
+                $"Completed.\n\nUpdated: {updated}\nSkipped: {skipped}");
+        }
+
+        private bool HasRevision(string fileName)
+        {
+            string name = Path.GetFileNameWithoutExtension(fileName);
+            return Regex.IsMatch(name, @"-REV[-_]\d+$", RegexOptions.IgnoreCase);
+        }
+
+        private string RemoveRevision(string fileName)
+        {
+            string name = Path.GetFileNameWithoutExtension(fileName);
+            string ext = Path.GetExtension(fileName);
+
+            string cleaned = Regex.Replace(name, @"-REV[-_]\d+$", "", RegexOptions.IgnoreCase);
+
+            return cleaned + ext;
+        }
+
+        private int ExtractRevision(string fileName)
+        {
+            string name = Path.GetFileNameWithoutExtension(fileName);
+
+            var match = Regex.Match(name, @"-REV[-_](\d+)$", RegexOptions.IgnoreCase);
+
+            if (match.Success)
+                return int.Parse(match.Groups[1].Value);
+
+            return -1;
         }
     }
 
