@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows.Input;
 
-namespace NPL_Tools
+namespace RevisionFileUpdater
 {
     public class RelayCommand : ICommand
     {
@@ -14,12 +14,16 @@ namespace NPL_Tools
             _canExecute = canExecute;
         }
 
-        public bool CanExecute(object parameter) => _canExecute?.Invoke() ?? true;
-        public void Execute(object parameter) => _execute?.Invoke();
+        public bool CanExecute(object parameter)
+            => _canExecute == null || _canExecute();
+
+        public void Execute(object parameter)
+            => _execute();
+
         public event EventHandler CanExecuteChanged
         {
-            add { CommandManager.RequerySuggested += value; }
-            remove { CommandManager.RequerySuggested -= value; }
+            add => CommandManager.RequerySuggested += value;
+            remove => CommandManager.RequerySuggested -= value;
         }
     }
 }
