@@ -1,7 +1,7 @@
-﻿<Application x:Class="PdfAnnotationExtractor.App"
+﻿<Application x:Class="NPLEtabs.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:PdfAnnotationExtractor"
+             xmlns:local="clr-namespace:NPLEtabs"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
          

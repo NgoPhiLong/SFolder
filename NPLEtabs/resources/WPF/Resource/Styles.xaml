@@ -10,6 +10,7 @@
         <ResourceDictionary Source="RadiobuttonStyle.xaml"/>
         <ResourceDictionary Source="GroupBoxStyle.xaml"/>
         <ResourceDictionary Source="ProgressBarStyle.xaml"/>
+        <ResourceDictionary Source="TreeViewStyle.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
     <!--<SolidColorBrush x:Key="MauChu" Color="MediumVioletRed"/>
